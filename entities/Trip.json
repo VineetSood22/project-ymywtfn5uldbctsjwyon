@@ -1,0 +1,58 @@
+{
+  "name": "Trip",
+  "description": "A planned trip created by users",
+  "properties": {
+    "trip_name": {
+      "type": "string",
+      "description": "Name of the trip"
+    },
+    "destination": {
+      "type": "string",
+      "description": "Destination location"
+    },
+    "departure_from": {
+      "type": "string",
+      "description": "Departure location"
+    },
+    "state": {
+      "type": "string",
+      "description": "State in India"
+    },
+    "famous_place": {
+      "type": "string",
+      "description": "Famous district or place selected"
+    },
+    "start_date": {
+      "type": "string",
+      "description": "Trip start date"
+    },
+    "end_date": {
+      "type": "string",
+      "description": "Trip end date"
+    },
+    "budget": {
+      "type": "number",
+      "description": "Budget for the trip"
+    },
+    "travelers": {
+      "type": "number",
+      "description": "Number of travelers"
+    },
+    "interests": {
+      "type": "array",
+      "description": "User interests for the trip",
+      "items": {
+        "type": "string"
+      }
+    },
+    "trip_data": {
+      "type": "object",
+      "description": "Generated trip details including stays, transport, itinerary, etc.",
+      "additionalProperties": true
+    },
+    "status": {
+      "type": "string",
+      "description": "Trip status: draft, planned, completed"
+    }
+  }
+}
