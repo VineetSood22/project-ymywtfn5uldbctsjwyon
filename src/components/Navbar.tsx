@@ -23,7 +23,7 @@ const Navbar = () => {
               <Plane className="h-6 w-6 text-white" />
             </div>
             <span className="text-2xl font-bold text-gradient">
-              Incredible India Tours
+              SAFAR AI
             </span>
           </Link>
 

@@ -17,8 +17,8 @@ const Index = () => {
       <section className="py-20 bg-gradient-to-b from-orange-50 to-white">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold mb-4">Why Choose Us</h2>
-            <p className="text-gray-600 text-lg">Your trusted partner for unforgettable Indian adventures</p>
+            <h2 className="text-4xl font-bold mb-4">Why Choose SAFAR AI</h2>
+            <p className="text-gray-600 text-lg">Your trusted AI partner for unforgettable Indian adventures</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -72,7 +72,7 @@ const Index = () => {
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div>
-              <h3 className="text-xl font-bold mb-4 text-gradient">Incredible India Tours</h3>
+              <h3 className="text-xl font-bold mb-4 text-gradient">SAFAR AI</h3>
               <p className="text-gray-400 text-sm">
                 Your AI-powered travel companion for exploring the beauty of India
               </p>
@@ -97,14 +97,14 @@ const Index = () => {
             <div>
               <h4 className="font-bold mb-4">Contact</h4>
               <ul className="space-y-2 text-sm text-gray-400">
-                <li>Email: info@incredibleindiatours.com</li>
+                <li>Email: hello@safarai.com</li>
                 <li>Phone: +91 1800-123-4567</li>
                 <li>Support: 24/7 Available</li>
               </ul>
             </div>
           </div>
           <div className="border-t border-gray-800 mt-8 pt-8 text-center text-sm text-gray-400">
-            <p>© 2024 Incredible India Tours. All rights reserved.</p>
+            <p>© 2024 SAFAR AI. All rights reserved.</p>
           </div>
         </div>
       </footer>

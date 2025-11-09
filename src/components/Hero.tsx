@@ -26,9 +26,9 @@ const Hero = () => {
           </div>
           
           <h1 className="text-5xl md:text-7xl font-bold mb-6 animate-fade-in">
-            Discover the Magic of
+            Your Journey Begins with
             <span className="block text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-amber-300 to-green-400">
-              Incredible India
+              SAFAR AI
             </span>
           </h1>
           
