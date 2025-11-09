@@ -7,13 +7,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
-import { CalendarIcon, Loader2 } from "lucide-react";
+import { CalendarIcon, Loader2, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 import { indianStates, famousPlacesByState, travelInterests } from "@/lib/indiaData";
 import { invokeLLM } from "@/integrations/core";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { Trip } from "@/entities";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface TripFormData {
     tripName: string;
@@ -33,6 +34,7 @@ const TripPlanningForm = () => {
     const navigate = useNavigate();
     const [step, setStep] = useState(1);
     const [isGenerating, setIsGenerating] = useState(false);
+    const [generationError, setGenerationError] = useState<string | null>(null);
     const [formData, setFormData] = useState<TripFormData>({
         tripName: "",
         destination: "",
@@ -72,6 +74,7 @@ const TripPlanningForm = () => {
 
     const generateTrip = async () => {
         setIsGenerating(true);
+        setGenerationError(null);
         
         try {
             const days = formData.startDate && formData.endDate 
@@ -80,131 +83,163 @@ const TripPlanningForm = () => {
 
             console.log("Generating trip with data:", formData);
 
-            const tripData = await invokeLLM({
-                prompt: `Generate a detailed travel itinerary for India with the following details:
-        
-        Destination: ${formData.famousPlace}, ${formData.state}
-        Duration: ${days} days
-        Budget: ₹${formData.budget} for ${formData.travelers} travelers
-        Interests: ${formData.interests.join(", ")}
-        
-        Please provide a comprehensive JSON response with:
-        1. stays: Array of 7-8 hotels/resorts/hostels with name, type, price (number), rating (number), amenities (array of strings), and location
-        2. transport: Object with flight, train, bus, cab details including duration, estimated_cost, and recommendation
-        3. itinerary: Array of day objects, each with day number, title, and activities array
-        4. weather: Object with general_condition, description, temperature (high, low, average), humidity, rainfall, clothing_suggestions array
-        5. places: Array of 10+ places with name, description, rating, category, location, best_time
-        6. cuisine: Object with must_try_dishes array, popular_restaurants array, street_food array
-        7. activities: Array of activity objects with name, description, duration
-        8. distance: Object with total_distance, travel_time, estimated_cost, by_mode array, route_info
-        9. crowd: Object with current_level, occupancy_percentage, current_description, best_months array, avoid_months array, tips array
-        10. budget_breakdown: Object with accommodation, food, transport, activities, miscellaneous (all numbers)
-        11. packing_list: Array of strings for essential items
-        
-        Make it realistic, detailed, and tailored to the budget and interests.`,
-                response_json_schema: {
-                    type: "object",
-                    properties: {
-                        stays: { 
-                            type: "array",
-                            items: {
-                                type: "object",
-                                properties: {
-                                    name: { type: "string" },
-                                    type: { type: "string" },
-                                    price: { type: "number" },
-                                    rating: { type: "number" },
-                                    amenities: { type: "array", items: { type: "string" } },
-                                    location: { type: "string" }
-                                }
-                            }
-                        },
-                        transport: { 
+            // Simplified prompt for better reliability
+            const prompt = `Create a detailed ${days}-day travel itinerary for ${formData.famousPlace}, ${formData.state}, India.
+
+Trip Details:
+- Travelers: ${formData.travelers} people
+- Budget: ₹${formData.budget} total
+- Interests: ${formData.interests.join(", ")}
+- Departure from: ${formData.departureFrom}
+
+Provide a complete JSON response with these sections:
+1. stays: Array of 5-7 accommodation options with name, type, price per night, rating, amenities array, location
+2. transport: Object with flight, train, bus options including duration, cost, recommendation
+3. itinerary: Array of ${days} day objects with day number, title, activities array (each with name, time, description, location)
+4. weather: Object with condition, description, temperature object (high, low, average), humidity, rainfall, clothing_suggestions array
+5. places: Array of 8-10 tourist spots with name, description, rating, category, location, best_time
+6. cuisine: Object with must_try_dishes array, popular_restaurants array, street_food array
+7. activities: Array of 5-8 activities with name, description, duration
+8. distance: Object with total_distance, travel_time, estimated_cost, by_mode array, route_info
+9. crowd: Object with current_level, occupancy_percentage, current_description, best_months array, avoid_months array, tips array
+10. budget_breakdown: Object with accommodation, food, transport, activities, miscellaneous (all numbers)
+11. packing_list: Array of 10-15 essential items
+
+Make it realistic and budget-appropriate.`;
+
+            let tripData;
+            let retryCount = 0;
+            const maxRetries = 2;
+
+            while (retryCount <= maxRetries) {
+                try {
+                    console.log(`Attempt ${retryCount + 1} to generate trip...`);
+                    
+                    tripData = await invokeLLM({
+                        prompt: prompt,
+                        response_json_schema: {
                             type: "object",
-                            additionalProperties: true
-                        },
-                        itinerary: { 
-                            type: "array",
-                            items: {
-                                type: "object",
-                                properties: {
-                                    day: { type: "number" },
-                                    title: { type: "string" },
-                                    activities: { 
-                                        type: "array",
-                                        items: {
-                                            type: "object",
-                                            properties: {
-                                                name: { type: "string" },
-                                                time: { type: "string" },
-                                                description: { type: "string" },
-                                                location: { type: "string" }
+                            properties: {
+                                stays: { 
+                                    type: "array",
+                                    items: {
+                                        type: "object",
+                                        properties: {
+                                            name: { type: "string" },
+                                            type: { type: "string" },
+                                            price: { type: "number" },
+                                            rating: { type: "number" },
+                                            amenities: { type: "array", items: { type: "string" } },
+                                            location: { type: "string" }
+                                        }
+                                    }
+                                },
+                                transport: { 
+                                    type: "object",
+                                    additionalProperties: true
+                                },
+                                itinerary: { 
+                                    type: "array",
+                                    items: {
+                                        type: "object",
+                                        properties: {
+                                            day: { type: "number" },
+                                            title: { type: "string" },
+                                            activities: { 
+                                                type: "array",
+                                                items: {
+                                                    type: "object",
+                                                    properties: {
+                                                        name: { type: "string" },
+                                                        time: { type: "string" },
+                                                        description: { type: "string" },
+                                                        location: { type: "string" }
+                                                    }
+                                                }
                                             }
                                         }
                                     }
+                                },
+                                weather: { 
+                                    type: "object",
+                                    additionalProperties: true
+                                },
+                                places: { 
+                                    type: "array",
+                                    items: {
+                                        type: "object",
+                                        properties: {
+                                            name: { type: "string" },
+                                            description: { type: "string" },
+                                            rating: { type: "number" },
+                                            category: { type: "string" },
+                                            location: { type: "string" },
+                                            best_time: { type: "string" }
+                                        }
+                                    }
+                                },
+                                cuisine: { 
+                                    type: "object",
+                                    additionalProperties: true
+                                },
+                                activities: { 
+                                    type: "array",
+                                    items: {
+                                        type: "object",
+                                        properties: {
+                                            name: { type: "string" },
+                                            description: { type: "string" },
+                                            duration: { type: "string" }
+                                        }
+                                    }
+                                },
+                                distance: { 
+                                    type: "object",
+                                    additionalProperties: true
+                                },
+                                crowd: { 
+                                    type: "object",
+                                    additionalProperties: true
+                                },
+                                budget_breakdown: { 
+                                    type: "object",
+                                    properties: {
+                                        accommodation: { type: "number" },
+                                        food: { type: "number" },
+                                        transport: { type: "number" },
+                                        activities: { type: "number" },
+                                        miscellaneous: { type: "number" }
+                                    }
+                                },
+                                packing_list: { 
+                                    type: "array",
+                                    items: { type: "string" }
                                 }
                             }
-                        },
-                        weather: { 
-                            type: "object",
-                            additionalProperties: true
-                        },
-                        places: { 
-                            type: "array",
-                            items: {
-                                type: "object",
-                                properties: {
-                                    name: { type: "string" },
-                                    description: { type: "string" },
-                                    rating: { type: "number" },
-                                    category: { type: "string" },
-                                    location: { type: "string" },
-                                    best_time: { type: "string" }
-                                }
-                            }
-                        },
-                        cuisine: { 
-                            type: "object",
-                            additionalProperties: true
-                        },
-                        activities: { 
-                            type: "array",
-                            items: {
-                                type: "object",
-                                properties: {
-                                    name: { type: "string" },
-                                    description: { type: "string" },
-                                    duration: { type: "string" }
-                                }
-                            }
-                        },
-                        distance: { 
-                            type: "object",
-                            additionalProperties: true
-                        },
-                        crowd: { 
-                            type: "object",
-                            additionalProperties: true
-                        },
-                        budget_breakdown: { 
-                            type: "object",
-                            properties: {
-                                accommodation: { type: "number" },
-                                food: { type: "number" },
-                                transport: { type: "number" },
-                                activities: { type: "number" },
-                                miscellaneous: { type: "number" }
-                            }
-                        },
-                        packing_list: { 
-                            type: "array",
-                            items: { type: "string" }
                         }
-                    }
-                }
-            });
+                    });
 
-            console.log("Trip data generated:", tripData);
+                    console.log("Trip data generated successfully:", tripData);
+                    break; // Success, exit retry loop
+                    
+                } catch (error) {
+                    console.error(`Attempt ${retryCount + 1} failed:`, error);
+                    retryCount++;
+                    
+                    if (retryCount > maxRetries) {
+                        throw error; // All retries exhausted
+                    }
+                    
+                    // Wait before retrying (exponential backoff)
+                    await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+                }
+            }
+
+            if (!tripData) {
+                throw new Error("Failed to generate trip data after multiple attempts");
+            }
+
+            console.log("Saving trip to database...");
 
             const savedTrip = await Trip.create({
                 trip_name: formData.tripName,
@@ -221,13 +256,28 @@ const TripPlanningForm = () => {
                 status: "planned"
             });
 
-            console.log("Trip saved to database:", savedTrip);
+            console.log("Trip saved successfully:", savedTrip);
 
             toast.success("Your trip has been generated successfully!");
             navigate(`/trip/${savedTrip.id}`);
-        } catch (error) {
+            
+        } catch (error: any) {
             console.error("Error generating trip:", error);
-            toast.error("Failed to generate trip. Please try again.");
+            
+            let errorMessage = "We're having trouble generating your trip right now. ";
+            
+            if (error.message?.includes("fetch")) {
+                errorMessage += "This might be a temporary connection issue. Please try again in a moment.";
+            } else if (error.message?.includes("timeout")) {
+                errorMessage += "The request took too long. Please try again.";
+            } else {
+                errorMessage += "Please check your internet connection and try again.";
+            }
+            
+            setGenerationError(errorMessage);
+            toast.error("Failed to generate trip", {
+                description: errorMessage
+            });
         } finally {
             setIsGenerating(false);
         }
@@ -464,6 +514,13 @@ const TripPlanningForm = () => {
                                 <p><strong>Interests:</strong> {formData.interests.join(", ")}</p>
                             </div>
                         </div>
+
+                        {generationError && (
+                            <Alert variant="destructive">
+                                <AlertCircle className="h-4 w-4" />
+                                <AlertDescription>{generationError}</AlertDescription>
+                            </Alert>
+                        )}
                         
                         <Button
                             onClick={generateTrip}
@@ -479,6 +536,12 @@ const TripPlanningForm = () => {
                                 "Generate Trip"
                             )}
                         </Button>
+
+                        {generationError && (
+                            <p className="text-sm text-center text-muted-foreground">
+                                Having trouble? Try refreshing the page or check your internet connection.
+                            </p>
+                        )}
                     </div>
                 );
 
@@ -501,39 +564,45 @@ const TripPlanningForm = () => {
     };
 
     return (
-        <Card className="max-w-2xl mx-auto">
+        <Card className="max-w-2xl mx-auto shadow-xl">
             <CardHeader>
                 <CardTitle className="text-center">
-                    <div className="text-sm text-gray-500 mb-2">Step {step} of {totalSteps}</div>
-                    <div className="w-full bg-gray-200 h-2 rounded-full mb-4">
-                        <div 
-                            className="bg-gradient-to-r from-orange-500 to-green-600 h-2 rounded-full transition-all duration-300"
-                            style={{ width: `${(step / totalSteps) * 100}%` }}
-                        />
+                    <div className="mb-4">
+                        <div className="flex justify-between items-center mb-2">
+                            <span className="text-sm text-muted-foreground">Step {step} of {totalSteps}</span>
+                            <span className="text-sm text-muted-foreground">{Math.round((step / totalSteps) * 100)}%</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div 
+                                className="bg-gradient-to-r from-orange-500 to-green-600 h-2 rounded-full transition-all duration-300"
+                                style={{ width: `${(step / totalSteps) * 100}%` }}
+                            />
+                        </div>
                     </div>
                 </CardTitle>
             </CardHeader>
             <CardContent>
                 {renderStep()}
                 
-                {step < 8 && (
-                    <div className="flex justify-between mt-6">
-                        <Button
-                            variant="outline"
-                            onClick={handleBack}
-                            disabled={step === 1}
-                        >
-                            Back
-                        </Button>
+                <div className="flex justify-between mt-8">
+                    <Button
+                        onClick={handleBack}
+                        disabled={step === 1 || isGenerating}
+                        variant="outline"
+                    >
+                        Back
+                    </Button>
+                    
+                    {step < totalSteps && (
                         <Button
                             onClick={handleNext}
-                            disabled={!canProceed()}
-                            className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700"
+                            disabled={!canProceed() || isGenerating}
+                            className="bg-gradient-to-r from-orange-500 to-green-600 hover:from-orange-600 hover:to-green-700"
                         >
                             Next
                         </Button>
-                    </div>
-                )}
+                    )}
+                </div>
             </CardContent>
         </Card>
     );
